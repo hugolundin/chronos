@@ -30,6 +30,9 @@ def before_request():
     if current_user.is_authenticated:
         current_user.ping()
 
+@auth.route('/', methods=['GET', 'POST'])
+def index():
+    return redirect(url_for('auth.login'))
 
 @auth.route('/login', methods=['GET', 'POST'])
 def login():
