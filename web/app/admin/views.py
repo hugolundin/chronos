@@ -22,6 +22,10 @@ from .forms import (AddTeacherForm,
                     EditWorkPeriodForm)
 from ..models import User, WorkPeriod
 from sqlalchemy import desc
+from werkzeug import secure_filename
+import openpyxl
+import re
+#TODO Add openpyxl to requirements.txt
 
 
 @admin.route('/', methods=['GET', 'POST'])
@@ -111,8 +115,48 @@ def upload_teachers():
     form = ExcelUploadForm()
 
     if form.validate_on_submit():
-        pass
+        filename = secure_filename(form.file.data.filename)
+        file = form.file.data
+        if file:            
+            wb = openpyxl.load_workbook(file)
 
+            for sheet in wb.worksheets:
+                for row in range(1, sheet.max_row + 1):
+                    first_name = sheet['A' + str(row)].value
+                    last_name = sheet['B' + str(row)].value
+                    email = sheet['C' + str(row)].value
+                    work_hours = sheet['D' + str(row)].value
+ 
+                    # TODO - Change flashed messages for if statements.
+                    if first_name is None or last_name is None or email is None or work_hours is None:
+                        continue
+
+                    if re.match('^[A-Ö]*(-| )?[A-Ö]*(-| )?[A-Ö]*$', first_name) == False:
+                        flash('Kunde inte lägga till {first_name} {last_name}, eftersom {first_name} inte är ett godkänt förnamn.'.format(first_name=first_name, last_name=last_name))
+                        continue
+
+                    if re.match('^[A-Ö]*(-| )?[A-Ö]*(-| )?[A-Ö]*$', last_name) == False:
+                        flash('Kunde inte lägga till {first_name} {last_name}, eftersom {last_name} inte är ett godkänt efternamn.'.format(first_name=first_name, last_name=last_name))
+                        continue
+
+                    if re.match('^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$', email) == False:
+                        flash('Kunde inte lägga till {first_name} {last_name}, eftersom {email} inte är en godkänd e-postadress.'.format(first_name=first_name, last_name=last_name, email=email))
+                        continue
+
+                    if type(work_hours) != int:
+                        flash('Kunde inte lägga till {first_name} {last_name}, eftersom {work_hours} inte är en siffra.'.format(first_name=first_name, last_name=last_name, work_hours=work_hours))
+
+                    existing_user = User.query.filter_by(email=email).first()
+                    if existing_user:
+                        flash('{} är redan inlagd i systemet.'.format(email))
+                        continue
+                    else:
+                        user = User(first_name=first_name, last_name=last_name, email=email)
+                        db.session.add(user)
+
+            db.session.commit()
+
+        return redirect(url_for('admin.teachers'))
     return render_template('admin/upload.html', form=form)
 
 
