@@ -45,7 +45,8 @@ class EditTeacherForm(Form):
 
 
 class ExcelUploadForm(Form):
-    upload = FileField('Excel-dokument', validators=[FileRequired(), FileAllowed(['xlsx'])])
+    file = FileField('', validators=[FileRequired(), FileAllowed(['xlsx', 'xlsm'], message='Fel filformat. Endast .xlsx och .xlsm (excelfiler) är tillåtna.')])
+    submit = SubmitField('Ladda upp')
 
 
 class AddWorkPeriodForm(Form):
